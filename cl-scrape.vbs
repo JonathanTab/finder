@@ -1,0 +1,1 @@
+CreateObject("Wscript.Shell").Run "node C:\Users\Jon\Downloads\nodes\main.js", 0

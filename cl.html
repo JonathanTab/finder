@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CL Scrape</title>
+  <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+
+
+
+    <style type="text/css">
+        body {
+            font-family: sans-serif;
+        }
+        a {
+          text-decoration: none;
+        }
+        a:hover {
+          text-decoration: underline;
+        }
+
+        .top-fill{
+          width: 100%;
+          height: 10px;
+          position: fixed;
+          top: 0;
+          z-index: 1002;
+          background-color: white;
+        }
+
+        header {
+          top: 1px;
+          height: 31px;
+          border-bottom: 1px #ccc solid;
+          background: #eee;
+          line-height: 1.925em;
+          padding: 5px 12px;
+          width: 100%;
+          z-index: 1003;
+          position: fixed;
+          display:flex;
+          align-items:center;
+        }
+        .header-logo{
+          border-radius: 1em;
+          background-color: #fff;
+          border: 1px solid #ccc;
+          float: left;
+          line-height: 1;
+          margin: 2px 5px;
+          padding: .25em;
+        }
+        @keyframes spinner {
+          to {transform: rotate(360deg);}
+        }
+         
+        .spinner {
+          display: inline-block;
+        }
+        .spinner:before {
+          content: '';
+          box-sizing: border-box;
+          position: absolute;
+          top: 40%;
+          left: 210px;
+          width: 25px;
+          height: 25px;
+          margin-top: -10px;
+          margin-left: -10px;
+          border-radius: 50%;
+          border: 4px solid #07d;
+          border-right: 5px solid transparent;
+          animation: spinner .29s linear infinite;
+        }
+        .filters-select{
+          position: fixed;
+          top: 11px;
+          left: 45%;
+        }
+        #deadsave-message{
+          color: white;
+          background-color: red;
+          border-radius: .25em;
+          border: 1px solid #ccc;
+          font-size: 20px;
+          font-family: "Arial",sans-serif;
+          padding: 1px 10px;
+          display: inline-block;
+          position: fixed;
+          left: 75%;
+        }
+        #deadsave-message:empty {
+            display: none;
+        }
+        #deadsave-message:after {
+            content: " dead saves";
+        }
+
+
+        .grid{
+          padding-top: 70px;
+        }
+
+        .result {
+        height: 280px;
+        width: 290px;
+        border-radius: 5px;
+        display: inline-block;
+        box-shadow: 0 0 7px 0 #ddd;
+        border: 1px solid #ccc;
+        line-height: 1.3em;
+        margin: 10px 10px;
+        overflow: hidden;
+        padding: 0 0 10px 0;
+        }
+        .pic-container{
+          height: 217px;
+          display: block;
+        }
+        .pic-container img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        .info-container{
+          /*width: 100%; apparently this doesnt help*/
+          font-family: "Arial",sans-serif;
+          font-size: 13px;
+          line-height: 18px;
+          padding: 5px;
+        }
+        .date {
+          color: gray;
+          font-size: 11px;
+          line-height: 22px;
+          margin-right: 2px;
+        }
+        .title {
+          font-family: "Times New Roman",Times,serif;
+          font-size: 16px;
+        }
+        .price {
+          border-radius: .25em;
+          border: 1px solid #ccc;
+          font-size: 12px;
+          font-family: "Arial",sans-serif;
+          padding: 1px 3px;
+          display: inline-block;
+        }
+        .distance {
+          color: #080;
+        }
+        .repost::after {
+          content: "Repost";
+          color: red;
+          position: relative;
+          top: -250px;
+          left: 75%;
+        }
+        .updated::after {
+          content: "Updated";
+          color: red;
+          position: relative;
+          top: -250px;
+          left: 75%;
+        }
+        .free{
+          box-shadow:  0 0 10px 0 #07D;
+        }
+        .saved .info-container{
+          background-color: #fce6b1;
+        }
+        /*hide saved old posts if they get unsaved*/
+        .saved.old {
+          display: block;
+        }
+        .old {
+          display: none;
+        }
+        .deadsave {
+          box-shadow:  0 0 10px 0 #F00;
+        }
+
+
+
+
+
+    </style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://unpkg.com/isotope-layout@3/dist/isotope.pkgd.min.js"></script>
+<script type="text/javascript">
+
+$(document).ready(function() {
+
+$( ".filters-select" ).load( "/cl-categories")
+$( "#deadsave-message" ).load( "/cl-deadsaves")
+$( ".grid" ).load( "/cl-list", function() {
+  var $grid = $('.grid').isotope({
+    itemSelector: '.result',
+    layoutMode: 'fitRows',
+    getSortData: {
+      timestamp: '[data-timestamp]'
+    },
+    sortAscending: false,
+    transitionDuration: 0
+  });
+  $grid.on( 'arrangeComplete', function( event, filteredItems ) {$('.spinner').hide();} )
+  $grid.isotope({ sortBy: 'timestamp' });
+  // bind filter on select change
+  $('.filters-select').on( 'change', function() {
+    // get filter value from option value
+    var filterValue = this.value;
+    // use filterFn if matches value
+    $grid.isotope({ filter: filterValue });
+  });
+});
+
+//do intial updating check
+$.get('/cl-updating', function(data) {
+        if (data.toString().includes("true")) {checkUpdateStatus();}
+      });
+
+
+});
+
+function saveToggle(id,category){
+  $.get( "/cl-save?id="+id+"&cat="+category, function() {
+  $("#"+id).toggleClass("saved");
+  $('.grid').isotope('layout');
+  $( "#deadsave-message" ).load( "/cl-deadsaves")
+});
+}
+
+function requestUpdate(){
+  $('.spinner').show();
+  $.get( "/cl-update", function() {
+    setTimeout(checkUpdateStatus,1000);
+  });
+  
+}
+function checkUpdateStatus(){
+  $('.spinner').show();
+    $.get('/cl-updating', function(data) {
+        if (data.toString().includes("true")) {
+          setTimeout(checkUpdateStatus,3000);
+        }else{
+          location.reload();
+        }
+        
+    });
+}
+</script>
+     
+</head>
+<body>
+<div class="top-fill"> more space</div>
+<header><a class="header-logo" href="/">CL Scraper</a>
+<button onclick='requestUpdate()'>Update</button>
+<div class="spinner"> </div>
+<select class="filters-select">
+  <option value="*">show all</option>
+</select>
+<div id="deadsave-message"></div>
+</header>
+
+<div class="grid">
+</div>
+
+
+
+</body>
+</html>
+
